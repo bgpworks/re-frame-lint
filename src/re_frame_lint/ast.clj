@@ -6,14 +6,10 @@
             [clojure.java.io :as io]
             [clojure.tools.reader :as reader]
             [cljs.util :as cljs-util]
-            [clojure.walk :as walk])
+            [clojure.walk :as walk]
+            [re-frame-lint.utils :as utils])
   (:import [java.io File]
            [java.net URL]))
-
-(defn into!
-  "Like into, but for transients"
-  [to from]
-  (reduce conj! to from))
 
 (defn children*
   "Return a vector of vectors of the children node key and the children expression
@@ -35,7 +31,7 @@
    vector contains only nodes and not vectors of nodes."
   [ast]
   (persistent!
-   (reduce (fn [acc [_ c]] ((if (vector? c) into! conj!) acc c))
+   (reduce (fn [acc [_ c]] ((if (vector? c) utils/into! conj!) acc c))
            (transient []) (children* ast))))
 
 (defn nodes
