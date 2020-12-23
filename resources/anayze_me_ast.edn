@@ -1,0 +1,979 @@
+[{:rename-macros {},
+  :renames {},
+  :use-macros {},
+  :excludes #{},
+  :name test-data.analyze-me,
+  :op :ns,
+  :cljs.analyzer/analyzed true,
+  :imports nil,
+  :requires
+  {rf re-frame.core,
+   re-frame.core re-frame.core,
+   subs test-data.subs,
+   test-data.subs test-data.subs},
+  :uses nil,
+  :reload
+  {:use nil, :require nil, :use-macros nil, :require-macros nil},
+  :require-macros nil,
+  :form
+  (ns
+   test-data.analyze-me
+   (:require [re-frame.core :as rf] [test-data.subs :as subs])),
+  :reloads {},
+  :doc nil,
+  :deps [re-frame.core test-data.subs]}
+ {:op :invoke,
+  :form
+  (rf/reg-sub
+   :test-data.analyze-me/setting
+   :<-
+   [:test-data.analyze-me/local-db]
+   (fn [ldb _] ldb)),
+  :fn
+  {:form rf/reg-sub,
+   :info {:name re-frame.core/reg-sub, :op :var, :ns re-frame.core},
+   :op :var,
+   :name re-frame.core/reg-sub,
+   :ns re-frame.core,
+   :cljs.analyzer/analyzed true},
+  :args
+  [{:op :const,
+    :val :test-data.analyze-me/setting,
+    :form :test-data.analyze-me/setting,
+    :tag cljs.core/Keyword,
+    :cljs.analyzer/analyzed true}
+   {:op :const,
+    :val :<-,
+    :form :<-,
+    :tag cljs.core/Keyword,
+    :cljs.analyzer/analyzed true}
+   {:op :vector,
+    :form [:test-data.analyze-me/local-db],
+    :items
+    [{:op :const,
+      :val :test-data.analyze-me/local-db,
+      :form :test-data.analyze-me/local-db,
+      :tag cljs.core/Keyword,
+      :cljs.analyzer/analyzed true}],
+    :children [:items],
+    :tag cljs.core/IVector,
+    :cljs.analyzer/analyzed true}
+   {:children [:methods],
+    :protocol-inline nil,
+    :name nil,
+    :loop-lets (),
+    :inferred-ret-tag nil,
+    :protocol-impl nil,
+    :op :fn,
+    :cljs.analyzer/analyzed true,
+    :variadic? false,
+    :methods
+    [{:children [:params :body],
+      :recurs nil,
+      :params
+      [{:name ldb,
+        :binding-form? true,
+        :op :binding,
+        :column 7,
+        :line 8,
+        :arg-id 0,
+        :info {:name ldb, :shadow nil},
+        :tag nil,
+        :shadow nil,
+        :local :arg}
+       {:name _,
+        :binding-form? true,
+        :op :binding,
+        :column 11,
+        :line 8,
+        :arg-id 1,
+        :info {:name _, :shadow nil},
+        :tag nil,
+        :shadow nil,
+        :local :arg}],
+      :type nil,
+      :fixed-arity 2,
+      :op :fn-method,
+      :variadic? false,
+      :form ([ldb _] ldb),
+      :body
+      {:op :do,
+       :form (do ldb),
+       :statements [],
+       :ret
+       {:form ldb,
+        :op :local,
+        :info
+        {:name ldb,
+         :binding-form? true,
+         :op :binding,
+         :column 7,
+         :line 8,
+         :arg-id 0,
+         :info {:name ldb, :shadow nil},
+         :tag nil,
+         :shadow nil,
+         :local :arg},
+        :name ldb,
+        :local :arg,
+        :arg-id 0,
+        :cljs.analyzer/analyzed true},
+       :children [:statements :ret],
+       :cljs.analyzer/analyzed true,
+       :body? true}}],
+    :recur-frames (nil),
+    :max-fixed-arity 2,
+    :form (fn* ([ldb _] ldb)),
+    :tag function,
+    :in-loop nil,
+    :jsdoc [nil]}],
+  :children [:fn :args],
+  :tag any,
+  :cljs.analyzer/analyzed true}
+ {:op :invoke,
+  :form
+  (rf/reg-event-fx
+   :test-data.analyze-me/update-setting
+   (fn
+    [cofx _]
+    {:test-data.analyze-me/api
+     {:url "/latest-res-id",
+      :method "GET",
+      :on-success
+      [:test-data.analyze-me/check-latest-res-id-success],
+      :on-error [:test-data.analyze-me/check-latest-res-id-error],
+      :on-complete
+      [:test-data.analyze-me/check-latest-res-id-complete],
+      :on-finally
+      [:test-data.analyze-me/check-latest-res-id-finally]},
+     :dispatch [:test-data.analyze-me/product-edit 1],
+     :dispatch-n
+     (list
+      [:test-data.analyze-me/dispatch-n-1]
+      [:test-data.analyze-me/dispatch-n-2 2]
+      [:test-data.analyze-me/dispatch-n-3 :arg])})),
+  :fn
+  {:form rf/reg-event-fx,
+   :info
+   {:name re-frame.core/reg-event-fx, :op :var, :ns re-frame.core},
+   :op :var,
+   :name re-frame.core/reg-event-fx,
+   :ns re-frame.core,
+   :cljs.analyzer/analyzed true},
+  :args
+  [{:op :const,
+    :val :test-data.analyze-me/update-setting,
+    :form :test-data.analyze-me/update-setting,
+    :tag cljs.core/Keyword,
+    :cljs.analyzer/analyzed true}
+   {:children [:methods],
+    :protocol-inline nil,
+    :name nil,
+    :loop-lets (),
+    :inferred-ret-tag cljs.core/IMap,
+    :protocol-impl nil,
+    :op :fn,
+    :cljs.analyzer/analyzed true,
+    :variadic? false,
+    :methods
+    [{:children [:params :body],
+      :recurs nil,
+      :params
+      [{:name cofx,
+        :binding-form? true,
+        :op :binding,
+        :column 7,
+        :line 13,
+        :arg-id 0,
+        :info {:name cofx, :shadow nil},
+        :tag nil,
+        :shadow nil,
+        :local :arg}
+       {:name _,
+        :binding-form? true,
+        :op :binding,
+        :column 12,
+        :line 13,
+        :arg-id 1,
+        :info {:name _, :shadow nil},
+        :tag nil,
+        :shadow nil,
+        :local :arg}],
+      :type nil,
+      :fixed-arity 2,
+      :op :fn-method,
+      :variadic? false,
+      :form
+      ([cofx _]
+       {:test-data.analyze-me/api
+        {:url "/latest-res-id",
+         :method "GET",
+         :on-success
+         [:test-data.analyze-me/check-latest-res-id-success],
+         :on-error [:test-data.analyze-me/check-latest-res-id-error],
+         :on-complete
+         [:test-data.analyze-me/check-latest-res-id-complete],
+         :on-finally
+         [:test-data.analyze-me/check-latest-res-id-finally]},
+        :dispatch [:test-data.analyze-me/product-edit 1],
+        :dispatch-n
+        (list
+         [:test-data.analyze-me/dispatch-n-1]
+         [:test-data.analyze-me/dispatch-n-2 2]
+         [:test-data.analyze-me/dispatch-n-3 :arg])}),
+      :tag cljs.core/IMap,
+      :body
+      {:ret
+       {:op :map,
+        :form
+        {:test-data.analyze-me/api
+         {:url "/latest-res-id",
+          :method "GET",
+          :on-success
+          [:test-data.analyze-me/check-latest-res-id-success],
+          :on-error
+          [:test-data.analyze-me/check-latest-res-id-error],
+          :on-complete
+          [:test-data.analyze-me/check-latest-res-id-complete],
+          :on-finally
+          [:test-data.analyze-me/check-latest-res-id-finally]},
+         :dispatch [:test-data.analyze-me/product-edit 1],
+         :dispatch-n
+         (list
+          [:test-data.analyze-me/dispatch-n-1]
+          [:test-data.analyze-me/dispatch-n-2 2]
+          [:test-data.analyze-me/dispatch-n-3 :arg])},
+        :keys
+        [{:op :const,
+          :val :test-data.analyze-me/api,
+          :form :test-data.analyze-me/api,
+          :tag cljs.core/Keyword,
+          :cljs.analyzer/analyzed true}
+         {:op :const,
+          :val :dispatch,
+          :form :dispatch,
+          :tag cljs.core/Keyword,
+          :cljs.analyzer/analyzed true}
+         {:op :const,
+          :val :dispatch-n,
+          :form :dispatch-n,
+          :tag cljs.core/Keyword,
+          :cljs.analyzer/analyzed true}],
+        :vals
+        [{:op :map,
+          :form
+          {:url "/latest-res-id",
+           :method "GET",
+           :on-success
+           [:test-data.analyze-me/check-latest-res-id-success],
+           :on-error
+           [:test-data.analyze-me/check-latest-res-id-error],
+           :on-complete
+           [:test-data.analyze-me/check-latest-res-id-complete],
+           :on-finally
+           [:test-data.analyze-me/check-latest-res-id-finally]},
+          :keys
+          [{:op :const,
+            :val :url,
+            :form :url,
+            :tag cljs.core/Keyword,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val :method,
+            :form :method,
+            :tag cljs.core/Keyword,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val :on-success,
+            :form :on-success,
+            :tag cljs.core/Keyword,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val :on-error,
+            :form :on-error,
+            :tag cljs.core/Keyword,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val :on-complete,
+            :form :on-complete,
+            :tag cljs.core/Keyword,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val :on-finally,
+            :form :on-finally,
+            :tag cljs.core/Keyword,
+            :cljs.analyzer/analyzed true}],
+          :vals
+          [{:op :const,
+            :val "/latest-res-id",
+            :form "/latest-res-id",
+            :tag string,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val "GET",
+            :form "GET",
+            :tag string,
+            :cljs.analyzer/analyzed true}
+           {:op :vector,
+            :form
+            [:test-data.analyze-me/check-latest-res-id-success],
+            :items
+            [{:op :const,
+              :val :test-data.analyze-me/check-latest-res-id-success,
+              :form
+              :test-data.analyze-me/check-latest-res-id-success,
+              :tag cljs.core/Keyword,
+              :cljs.analyzer/analyzed true}],
+            :children [:items],
+            :tag cljs.core/IVector,
+            :cljs.analyzer/analyzed true}
+           {:op :vector,
+            :form [:test-data.analyze-me/check-latest-res-id-error],
+            :items
+            [{:op :const,
+              :val :test-data.analyze-me/check-latest-res-id-error,
+              :form :test-data.analyze-me/check-latest-res-id-error,
+              :tag cljs.core/Keyword,
+              :cljs.analyzer/analyzed true}],
+            :children [:items],
+            :tag cljs.core/IVector,
+            :cljs.analyzer/analyzed true}
+           {:op :vector,
+            :form
+            [:test-data.analyze-me/check-latest-res-id-complete],
+            :items
+            [{:op :const,
+              :val
+              :test-data.analyze-me/check-latest-res-id-complete,
+              :form
+              :test-data.analyze-me/check-latest-res-id-complete,
+              :tag cljs.core/Keyword,
+              :cljs.analyzer/analyzed true}],
+            :children [:items],
+            :tag cljs.core/IVector,
+            :cljs.analyzer/analyzed true}
+           {:op :vector,
+            :form
+            [:test-data.analyze-me/check-latest-res-id-finally],
+            :items
+            [{:op :const,
+              :val :test-data.analyze-me/check-latest-res-id-finally,
+              :form
+              :test-data.analyze-me/check-latest-res-id-finally,
+              :tag cljs.core/Keyword,
+              :cljs.analyzer/analyzed true}],
+            :children [:items],
+            :tag cljs.core/IVector,
+            :cljs.analyzer/analyzed true}],
+          :children [:keys :vals],
+          :tag cljs.core/IMap,
+          :cljs.analyzer/analyzed true}
+         {:op :vector,
+          :form [:test-data.analyze-me/product-edit 1],
+          :items
+          [{:op :const,
+            :val :test-data.analyze-me/product-edit,
+            :form :test-data.analyze-me/product-edit,
+            :tag cljs.core/Keyword,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val 1,
+            :form 1,
+            :tag number,
+            :cljs.analyzer/analyzed true}],
+          :children [:items],
+          :tag cljs.core/IVector,
+          :cljs.analyzer/analyzed true}
+         {:op :new,
+          :form
+          (new
+           cljs.core/List
+           nil
+           [:test-data.analyze-me/dispatch-n-1]
+           (cljs.core/list
+            [:test-data.analyze-me/dispatch-n-2 2]
+            [:test-data.analyze-me/dispatch-n-3 :arg])
+           3
+           nil),
+          :class
+          {:form cljs.core/List,
+           :info {:name cljs.core/List, :op :var, :ns cljs.core},
+           :op :var,
+           :name cljs.core/List,
+           :ns cljs.core,
+           :cljs.analyzer/analyzed true},
+          :args
+          [{:op :const,
+            :val nil,
+            :form nil,
+            :tag clj-nil,
+            :cljs.analyzer/analyzed true}
+           {:op :vector,
+            :form [:test-data.analyze-me/dispatch-n-1],
+            :items
+            [{:op :const,
+              :val :test-data.analyze-me/dispatch-n-1,
+              :form :test-data.analyze-me/dispatch-n-1,
+              :tag cljs.core/Keyword,
+              :cljs.analyzer/analyzed true}],
+            :children [:items],
+            :tag cljs.core/IVector,
+            :cljs.analyzer/analyzed true}
+           {:op :new,
+            :form
+            (new
+             cljs.core/List
+             nil
+             [:test-data.analyze-me/dispatch-n-2 2]
+             (cljs.core/list
+              [:test-data.analyze-me/dispatch-n-3 :arg])
+             2
+             nil),
+            :class
+            {:form cljs.core/List,
+             :info {:name cljs.core/List, :op :var, :ns cljs.core},
+             :op :var,
+             :name cljs.core/List,
+             :ns cljs.core,
+             :cljs.analyzer/analyzed true},
+            :args
+            [{:op :const,
+              :val nil,
+              :form nil,
+              :tag clj-nil,
+              :cljs.analyzer/analyzed true}
+             {:op :vector,
+              :form [:test-data.analyze-me/dispatch-n-2 2],
+              :items
+              [{:op :const,
+                :val :test-data.analyze-me/dispatch-n-2,
+                :form :test-data.analyze-me/dispatch-n-2,
+                :tag cljs.core/Keyword,
+                :cljs.analyzer/analyzed true}
+               {:op :const,
+                :val 2,
+                :form 2,
+                :tag number,
+                :cljs.analyzer/analyzed true}],
+              :children [:items],
+              :tag cljs.core/IVector,
+              :cljs.analyzer/analyzed true}
+             {:op :new,
+              :form
+              (new
+               cljs.core/List
+               nil
+               [:test-data.analyze-me/dispatch-n-3 :arg]
+               nil
+               1
+               nil),
+              :class
+              {:form cljs.core/List,
+               :info {:name cljs.core/List, :op :var, :ns cljs.core},
+               :op :var,
+               :name cljs.core/List,
+               :ns cljs.core,
+               :cljs.analyzer/analyzed true},
+              :args
+              [{:op :const,
+                :val nil,
+                :form nil,
+                :tag clj-nil,
+                :cljs.analyzer/analyzed true}
+               {:op :vector,
+                :form [:test-data.analyze-me/dispatch-n-3 :arg],
+                :items
+                [{:op :const,
+                  :val :test-data.analyze-me/dispatch-n-3,
+                  :form :test-data.analyze-me/dispatch-n-3,
+                  :tag cljs.core/Keyword,
+                  :cljs.analyzer/analyzed true}
+                 {:op :const,
+                  :val :arg,
+                  :form :arg,
+                  :tag cljs.core/Keyword,
+                  :cljs.analyzer/analyzed true}],
+                :children [:items],
+                :tag cljs.core/IVector,
+                :cljs.analyzer/analyzed true}
+               {:op :const,
+                :val nil,
+                :form nil,
+                :tag clj-nil,
+                :cljs.analyzer/analyzed true}
+               {:op :const,
+                :val 1,
+                :form 1,
+                :tag number,
+                :cljs.analyzer/analyzed true}
+               {:op :const,
+                :val nil,
+                :form nil,
+                :tag clj-nil,
+                :cljs.analyzer/analyzed true}],
+              :children [:class :args],
+              :tag cljs.core/List,
+              :cljs.analyzer/analyzed true}
+             {:op :const,
+              :val 2,
+              :form 2,
+              :tag number,
+              :cljs.analyzer/analyzed true}
+             {:op :const,
+              :val nil,
+              :form nil,
+              :tag clj-nil,
+              :cljs.analyzer/analyzed true}],
+            :children [:class :args],
+            :tag cljs.core/List,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val 3,
+            :form 3,
+            :tag number,
+            :cljs.analyzer/analyzed true}
+           {:op :const,
+            :val nil,
+            :form nil,
+            :tag clj-nil,
+            :cljs.analyzer/analyzed true}],
+          :children [:class :args],
+          :tag cljs.core/List,
+          :cljs.analyzer/analyzed true}],
+        :children [:keys :vals],
+        :tag cljs.core/IMap,
+        :cljs.analyzer/analyzed true},
+       :children [:statements :ret],
+       :body? true,
+       :op :do,
+       :cljs.analyzer/analyzed true,
+       :form
+       (do
+        {:test-data.analyze-me/api
+         {:url "/latest-res-id",
+          :method "GET",
+          :on-success
+          [:test-data.analyze-me/check-latest-res-id-success],
+          :on-error
+          [:test-data.analyze-me/check-latest-res-id-error],
+          :on-complete
+          [:test-data.analyze-me/check-latest-res-id-complete],
+          :on-finally
+          [:test-data.analyze-me/check-latest-res-id-finally]},
+         :dispatch [:test-data.analyze-me/product-edit 1],
+         :dispatch-n
+         (list
+          [:test-data.analyze-me/dispatch-n-1]
+          [:test-data.analyze-me/dispatch-n-2 2]
+          [:test-data.analyze-me/dispatch-n-3 :arg])}),
+       :tag cljs.core/IMap,
+       :statements []}}],
+    :recur-frames (nil),
+    :max-fixed-arity 2,
+    :form
+    (fn*
+     ([cofx _]
+      {:test-data.analyze-me/api
+       {:url "/latest-res-id",
+        :method "GET",
+        :on-success
+        [:test-data.analyze-me/check-latest-res-id-success],
+        :on-error [:test-data.analyze-me/check-latest-res-id-error],
+        :on-complete
+        [:test-data.analyze-me/check-latest-res-id-complete],
+        :on-finally
+        [:test-data.analyze-me/check-latest-res-id-finally]},
+       :dispatch [:test-data.analyze-me/product-edit 1],
+       :dispatch-n
+       (list
+        [:test-data.analyze-me/dispatch-n-1]
+        [:test-data.analyze-me/dispatch-n-2 2]
+        [:test-data.analyze-me/dispatch-n-3 :arg])})),
+    :tag function,
+    :in-loop nil,
+    :jsdoc [nil]}],
+  :children [:fn :args],
+  :tag any,
+  :cljs.analyzer/analyzed true}
+ {:children [:var :init],
+  :init
+  {:op :const,
+   :val :test-data.analyze-me/ns-keyword,
+   :form :test-data.analyze-me/ns-keyword,
+   :tag cljs.core/Keyword,
+   :cljs.analyzer/analyzed true},
+  :ns test-data.analyze-me,
+  :name test-data.analyze-me/ns-keyword-symbol,
+  :op :def,
+  :cljs.analyzer/analyzed true,
+  :var
+  {:form ns-keyword-symbol,
+   :op :var,
+   :info
+   {:meta
+    {:file
+     "/Abs-path/resources/analyze_me.cljs",
+     :line 25,
+     :column 6,
+     :end-line 25,
+     :end-column 23},
+    :ns test-data.analyze-me,
+    :name test-data.analyze-me/ns-keyword-symbol,
+    :file "resources/analyze_me.cljs",
+    :end-column 23,
+    :op :var,
+    :column nil,
+    :line nil,
+    :end-line 25,
+    :tag cljs.core/Keyword},
+   :name test-data.analyze-me/ns-keyword-symbol,
+   :ns test-data.analyze-me,
+   :tag cljs.core/Keyword,
+   :cljs.analyzer/analyzed true},
+  :form (def ns-keyword-symbol :test-data.analyze-me/ns-keyword),
+  :tag cljs.core/Keyword,
+  :doc nil,
+  :jsdoc nil}
+ {:children [:var :init],
+  :init
+  {:children [:local :methods],
+   :protocol-inline nil,
+   :name
+   {:name top,
+    :op :binding,
+    :local :fn,
+    :info
+    {:fn-self-name true,
+     :fn-scope [],
+     :ns test-data.analyze-me,
+     :shadow nil}},
+   :loop-lets (),
+   :inferred-ret-tag function,
+   :protocol-impl nil,
+   :op :fn,
+   :cljs.analyzer/analyzed true,
+   :variadic? false,
+   :methods
+   [{:children [:params :body],
+     :recurs nil,
+     :params [],
+     :type nil,
+     :fixed-arity 0,
+     :op :fn-method,
+     :variadic? false,
+     :form
+     ([]
+      (let
+       [state_ (rf/subscribe [:test-data.subs/subs-key])]
+       (fn [] [:div @state_]))),
+     :tag function,
+     :body
+     {:ret
+      {:op :let,
+       :bindings
+       [{:init
+         {:op :invoke,
+          :form (rf/subscribe [:test-data.subs/subs-key]),
+          :fn
+          {:form rf/subscribe,
+           :info
+           {:name re-frame.core/subscribe,
+            :op :var,
+            :ns re-frame.core},
+           :op :var,
+           :name re-frame.core/subscribe,
+           :ns re-frame.core,
+           :cljs.analyzer/analyzed true},
+          :args
+          [{:op :vector,
+            :form [:test-data.subs/subs-key],
+            :items
+            [{:op :const,
+              :val :test-data.subs/subs-key,
+              :form :test-data.subs/subs-key,
+              :tag cljs.core/Keyword,
+              :cljs.analyzer/analyzed true}],
+            :children [:items],
+            :tag cljs.core/IVector,
+            :cljs.analyzer/analyzed true}],
+          :children [:fn :args],
+          :tag any,
+          :cljs.analyzer/analyzed true},
+         :name state_,
+         :binding-form? true,
+         :op :binding,
+         :column 9,
+         :line 28,
+         :info {:name state_, :shadow nil},
+         :tag any,
+         :shadow nil,
+         :local :let}],
+       :body
+       {:ret
+        {:children [:methods],
+         :protocol-inline nil,
+         :name nil,
+         :loop-lets
+         ({:params
+           [{:init
+             {:op :invoke,
+              :form (rf/subscribe [:test-data.subs/subs-key]),
+              :fn
+              {:form rf/subscribe,
+               :info
+               {:name re-frame.core/subscribe,
+                :op :var,
+                :ns re-frame.core},
+               :op :var,
+               :name re-frame.core/subscribe,
+               :ns re-frame.core,
+               :cljs.analyzer/analyzed true},
+              :args
+              [{:op :vector,
+                :form [:test-data.subs/subs-key],
+                :items
+                [{:op :const,
+                  :val :test-data.subs/subs-key,
+                  :form :test-data.subs/subs-key,
+                  :tag cljs.core/Keyword,
+                  :cljs.analyzer/analyzed true}],
+                :children [:items],
+                :tag cljs.core/IVector,
+                :cljs.analyzer/analyzed true}],
+              :children [:fn :args],
+              :tag any,
+              :cljs.analyzer/analyzed true},
+             :name state_,
+             :binding-form? true,
+             :op :binding,
+             :column 9,
+             :line 28,
+             :info {:name state_, :shadow nil},
+             :tag any,
+             :shadow nil,
+             :local :let}]}),
+         :inferred-ret-tag cljs.core/IVector,
+         :protocol-impl nil,
+         :op :fn,
+         :cljs.analyzer/analyzed true,
+         :variadic? false,
+         :methods
+         [{:children [:params :body],
+           :recurs nil,
+           :params [],
+           :type nil,
+           :fixed-arity 0,
+           :op :fn-method,
+           :variadic? false,
+           :form ([] [:div @state_]),
+           :tag cljs.core/IVector,
+           :body
+           {:ret
+            {:op :vector,
+             :form [:div @state_],
+             :items
+             [{:op :const,
+               :val :div,
+               :form :div,
+               :tag cljs.core/Keyword,
+               :cljs.analyzer/analyzed true}
+              {:op :invoke,
+               :form @state_,
+               :fn
+               {:form clojure.core/deref,
+                :info
+                {:name cljs.core/deref, :op :var, :ns cljs.core},
+                :op :var,
+                :name cljs.core/deref,
+                :ns cljs.core,
+                :cljs.analyzer/analyzed true},
+               :args
+               [{:init
+                 {:op :invoke,
+                  :form (rf/subscribe [:test-data.subs/subs-key]),
+                  :fn
+                  {:form rf/subscribe,
+                   :info
+                   {:name re-frame.core/subscribe,
+                    :op :var,
+                    :ns re-frame.core},
+                   :op :var,
+                   :name re-frame.core/subscribe,
+                   :ns re-frame.core,
+                   :cljs.analyzer/analyzed true},
+                  :args
+                  [{:op :vector,
+                    :form [:test-data.subs/subs-key],
+                    :items
+                    [{:op :const,
+                      :val :test-data.subs/subs-key,
+                      :form :test-data.subs/subs-key,
+                      :tag cljs.core/Keyword,
+                      :cljs.analyzer/analyzed true}],
+                    :children [:items],
+                    :tag cljs.core/IVector,
+                    :cljs.analyzer/analyzed true}],
+                  :children [:fn :args],
+                  :tag any,
+                  :cljs.analyzer/analyzed true},
+                 :name state_,
+                 :op :local,
+                 :cljs.analyzer/analyzed true,
+                 :info
+                 {:init
+                  {:op :invoke,
+                   :form (rf/subscribe [:test-data.subs/subs-key]),
+                   :fn
+                   {:form rf/subscribe,
+                    :info
+                    {:name re-frame.core/subscribe,
+                     :op :var,
+                     :ns re-frame.core},
+                    :op :var,
+                    :name re-frame.core/subscribe,
+                    :ns re-frame.core,
+                    :cljs.analyzer/analyzed true},
+                   :args
+                   [{:op :vector,
+                     :form [:test-data.subs/subs-key],
+                     :items
+                     [{:op :const,
+                       :val :test-data.subs/subs-key,
+                       :form :test-data.subs/subs-key,
+                       :tag cljs.core/Keyword,
+                       :cljs.analyzer/analyzed true}],
+                     :children [:items],
+                     :tag cljs.core/IVector,
+                     :cljs.analyzer/analyzed true}],
+                   :children [:fn :args],
+                   :tag any,
+                   :cljs.analyzer/analyzed true},
+                  :name state_,
+                  :binding-form? true,
+                  :op :binding,
+                  :column 9,
+                  :line 28,
+                  :info {:name state_, :shadow nil},
+                  :tag any,
+                  :shadow nil,
+                  :local :let},
+                 :form state_,
+                 :tag any,
+                 :local :let}],
+               :children [:fn :args],
+               :tag any,
+               :cljs.analyzer/analyzed true}],
+             :children [:items],
+             :tag cljs.core/IVector,
+             :cljs.analyzer/analyzed true},
+            :children [:statements :ret],
+            :body? true,
+            :op :do,
+            :cljs.analyzer/analyzed true,
+            :form (do [:div @state_]),
+            :tag cljs.core/IVector,
+            :statements []}}],
+         :recur-frames
+         ({:protocol-impl nil,
+           :params [],
+           :flag #<Atom@5a008463: nil>,
+           :tags #<Atom@76d323ec: []>}
+          nil),
+         :max-fixed-arity 0,
+         :form (fn* ([] [:div @state_])),
+         :tag function,
+         :in-loop nil,
+         :jsdoc [nil]},
+        :children [:statements :ret],
+        :body? true,
+        :op :do,
+        :cljs.analyzer/analyzed true,
+        :form (do (fn [] [:div @state_])),
+        :tag function,
+        :statements []},
+       :form
+       (let*
+        [state_ (rf/subscribe [:test-data.subs/subs-key])]
+        (fn [] [:div @state_])),
+       :children [:bindings :body],
+       :tag function,
+       :cljs.analyzer/analyzed true},
+      :children [:statements :ret],
+      :body? true,
+      :op :do,
+      :cljs.analyzer/analyzed true,
+      :form
+      (do
+       (let
+        [state_ (rf/subscribe [:test-data.subs/subs-key])]
+        (fn [] [:div @state_]))),
+      :tag function,
+      :statements []}}],
+   :recur-frames (nil),
+   :max-fixed-arity 0,
+   :form
+   (fn*
+    ([]
+     (let
+      [state_ (rf/subscribe [:test-data.subs/subs-key])]
+      (fn [] [:div @state_])))),
+   :tag function,
+   :in-loop nil,
+   :local
+   {:name top,
+    :op :binding,
+    :local :fn,
+    :info
+    {:fn-self-name true,
+     :fn-scope [],
+     :ns test-data.analyze-me,
+     :shadow nil}},
+   :jsdoc [nil]},
+  :ns test-data.analyze-me,
+  :name test-data.analyze-me/top,
+  :op :def,
+  :cljs.analyzer/analyzed true,
+  :var
+  {:form top,
+   :op :var,
+   :info
+   {:protocol-inline nil,
+    :meta
+    {:file
+     "/Abs-path/resources/analyze_me.cljs",
+     :line 27,
+     :column 7,
+     :end-line 27,
+     :end-column 10,
+     :arglists '([])},
+    :ns test-data.analyze-me,
+    :name test-data.analyze-me/top,
+    :file "resources/analyze_me.cljs",
+    :end-column 10,
+    :method-params ([]),
+    :protocol-impl nil,
+    :op :var,
+    :arglists-meta (nil nil),
+    :column nil,
+    :variadic? false,
+    :line nil,
+    :ret-tag function,
+    :end-line 27,
+    :max-fixed-arity 0,
+    :fn-var true,
+    :arglists '([])},
+   :name test-data.analyze-me/top,
+   :ns test-data.analyze-me,
+   :cljs.analyzer/analyzed true},
+  :ret-tag function,
+  :form
+  (def
+   top
+   (cljs.core/fn
+    ([]
+     (let
+      [state_ (rf/subscribe [:test-data.subs/subs-key])]
+      (fn [] [:div @state_]))))),
+  :tag function,
+  :doc nil,
+  :jsdoc nil}]
