@@ -20,6 +20,7 @@ clone this project somewhere.
 - 속도 향상
   - 파일 단위로 캐쉬 저장. [cljs.analyzer](https://github.com/clojure/clojurescript/blob/946348da8eb705da23f465be29246d4f8b73d45f/src/main/clojure/cljs/analyzer.cljc#L4636)
   - grallvm 이용한 native compile. clojurescript를 deps로 가지고 있어서 아마 안될 듯.
+- 에디터 호환을 위한 output 포멧. (GNU grep 포멧, ...)
 
 ## Limitation
 
