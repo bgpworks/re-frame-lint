@@ -15,13 +15,18 @@ clone this project somewhere.
 
 ## TODO
 
-- 에러가 발생한 파일 위치 정확하게 출력
+- logger library 붙이기.
+- 쉽게 실행할 수 있도록 lein plugin 으로 동작하도록 한다.
+- 속도 향상
+  - 파일 단위로 캐쉬 저장. [cljs.analyzer](https://github.com/clojure/clojurescript/blob/946348da8eb705da23f465be29246d4f8b73d45f/src/main/clojure/cljs/analyzer.cljc#L4636)
+  - grallvm 이용한 native compile. clojurescript를 deps로 가지고 있어서 아마 안될 듯.
 
 ## Limitation
 
-- `reg-event-fx` body에서 참조하는 event key는 찾지 못함.
+- `reg-event-fx` body에서 참조하는 event key를 정확히 찾지는 못한다. (handler function body를 뒤져서 vector의 첫번째 인자로 qualified-keyword 가 등장하면 무조건 event-key라고 가정한다.)
 - 3rd party macro는 무시하기 때문에 올바르게 분석이 안될 수도 있음.
 - re-frame library를 직접 호출하는 코드들만 모아서 검색하기 때문에 wrapper 함수를 만들어서 간접 호출을 하면 찾을 수 없다.
+- 에러 위치가 정확하지는 않다. cljs.analyzer가 parameter의 파일 위치를 기록해주지 않는다. 대신 문제가 있는 re-frame library call 위치를 보고해준다.
 
 
 ```cljs

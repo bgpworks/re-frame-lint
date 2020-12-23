@@ -59,6 +59,28 @@
           (recur found-keys
                  (next args)))))))
 
+(defn- collect-leading-qualified-keyword-of-vector [top-node]
+  (->> (ast/nodes top-node)
+       ;; vectors
+       (filter (fn [node]
+                 (= (:op node)
+                    :vector)))
+       ;; first child's value
+       (keep (comp :val first :items))
+       ;; qualified keywords
+       (filter qualified-keyword?)))
+
+(defn- get-deps-event-keys
+  "연쇄적으로 부르는 deps 가져오기 (dispatch, dispatch-later, dispatch-n, api, api-n, ...)
+  1. child node 중 vector를 뒤져서 해당 컬럼을 빼온다.
+  2. 무식하지만 vector의 첫번째 child로 qualified keyword가 나오면 죄다 event-key라 간주한다.
+  구현이 간단한 2를 씀."
+  [reg-event-fx-node]
+  (let [handler-node (last (:args reg-event-fx-node))]
+    (when (= (:op handler-node)
+             :fn)
+      (collect-leading-qualified-keyword-of-vector handler-node))))
+
 (defn- get-line-info
   "invoke node의 line 정보. 왜인지 모르겠지만 자기 자신의 위치는 없다.
   대신 함수의 위치는 있는데, 대충 비슷할 테니 이걸로 쓴다."
@@ -123,18 +145,26 @@
                                  deps-sub-keys))))
 
                 ;; reg-event-fx
-                ;; TODO: 연쇄적으로 부르는 deps 가져오기 (dispatch-n, dispatch-later, dispatch-n)
                 (= (get-in node [:fn :name])
                    're-frame.core/reg-event-fx)
                 (let [decl-event-key (get-in node
                                              [:args 0 :val])
+                      deps-event-keys (get-deps-event-keys node)
                       line-info (get-line-info node)]
-                  (update aux
-                          :decl-event-key
-                          conj!
-                          (key-with-line-info filepath
-                                              line-info
-                                              decl-event-key)))
+                  (cond-> aux
+                    decl-event-key
+                    (update :decl-event-key
+                            conj!
+                            (key-with-line-info filepath
+                                                line-info
+                                                decl-event-key))
+                    (seq deps-event-keys)
+                    (update :refer-event-key
+                            utils/into!
+                            (map (partial key-with-line-info
+                                          filepath
+                                          line-info)
+                                 deps-event-keys))))
 
                 ;; reg-event-db
                 (= (get-in node [:fn :name])
@@ -258,11 +288,11 @@
         has-unknown-sub-key? (lint-unknown-sub-keys call-info)
         has-unknown-event-key? (lint-unknown-event-keys call-info)
         has-unused-sub-key? (lint-unused-sub-keys call-info)
-        #_#_has-unused-event-key? (lint-unused-event-keys call-info)]
+        has-unused-event-key? (lint-unused-event-keys call-info)]
     {:some-warnings (or has-unknown-sub-key?
                         has-unknown-event-key?
                         has-unused-sub-key?
-                        #_has-unused-event-key?)}))
+                        has-unused-event-key?)}))
 
 (defn- lint-from-cmdline [opts]
   (let [ret (lint opts)]
