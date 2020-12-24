@@ -1,9 +1,10 @@
 (ns re-frame-lint.core
   (:gen-class)
-  (:require [clojure.set :as clj-set]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
+            [clojure.pprint :as pprint]
             [re-frame-lint.ast :as ast]
-            [re-frame-lint.utils :as utils])
+            [re-frame-lint.utils :as utils]
+            [re-frame-lint.lints :as lints])
   (:import java.io.File))
 
 (defn ends-with?
@@ -28,49 +29,98 @@
            (filter clojure-file? (file-seq dir))))
 
 
-(defn- get-deps-sub-keys [reg-sub-node]
+(defn- refer-info
+  "사용되는 곳. 인자들을 `args`로 받는다."
+  [filepath line-info key args]
+  (assoc line-info
+         :filepath filepath
+         :key key
+         :args args))
+
+(defn- guess-arity
+  "re-frame event/subscribe handler의 두번째 인자를 분석하여 arity를 추론한다."
+  [form]
+  (cond
+    ;; 아예 선언조차 안하고 생략한 경우.
+    (nil? form)
+    1
+
+    (= form '_)
+    1
+
+    (vector? form)
+    (if (= (second (reverse form))
+           :as)
+      (- (count form) 2)
+      (count form))
+
+    :else
+    nil))
+
+(defn- decl-sub-info
+  "선언. 인자 선언을 `spec`으로 받는다."
+  [filepath line-info key cb-spec input-signals]
+  (assoc line-info
+         :filepath filepath
+         :key key
+         :spec cb-spec
+         :arity (guess-arity (second cb-spec))
+         :input-signal-count (count input-signals)))
+
+(defn- decl-event-info
+  "선언. 인자 선언을 `spec`으로 받는다."
+  [filepath line-info key cb-spec]
+  (assoc line-info
+         :filepath filepath
+         :key key
+         :spec cb-spec
+         :arity (guess-arity (second cb-spec))))
+
+(defn- collect-dependant-subs-calls [reg-sub-node]
   (let [mid-args (-> (:args reg-sub-node)
-                 butlast
-                 next)]
-    (loop [found-keys []
+                     butlast
+                     next)]
+    (loop [found-refers []
            [maybe-> vector-node :as args] mid-args]
       (cond
         (nil? maybe->)
-        found-keys
+        found-refers
 
         (not= (:val maybe->)
               :<-)
-        (recur found-keys
+        (recur found-refers
                (next args))
         
         (= (:op vector-node)
            :vector)
-        (if-let [sub-key (get-in vector-node
-                                 [:items 0 :val])]
-          (recur (conj found-keys
-                       sub-key)
+        (if (get-in vector-node
+                    [:items 0 :val])
+          (recur (conj found-refers
+                       (:form vector-node))
                  (nnext args))
-          (recur found-keys
-                 (nnext args)))
+          (do
+            (prn "Invalid reg-sub syntax:" (:form reg-sub-node))
+            (recur found-refers
+                   (nnext args))))
 
         :else
         (do
           (prn "Invalid reg-sub syntax:" (:form reg-sub-node))
-          (recur found-keys
+          (recur found-refers
                  (next args)))))))
 
-(defn- collect-leading-qualified-keyword-of-vector [top-node]
+(defn- collect-vectors-with-leading-qualified-keyword [top-node]
   (->> (ast/nodes top-node)
-       ;; vectors
-       (filter (fn [node]
-                 (= (:op node)
-                    :vector)))
-       ;; first child's value
-       (keep (comp :val first :items))
-       ;; qualified keywords
-       (filter qualified-keyword?)))
+       (keep (fn [node]
+               (when (and (= (:op node)
+                             :vector)
+                          (-> node
+                              :form
+                              first
+                              qualified-keyword?))
+                 (-> node :form))))))
 
-(defn- get-deps-event-keys
+(defn- collect-dependant-event-calls
   "연쇄적으로 부르는 deps 가져오기 (dispatch, dispatch-later, dispatch-n, api, api-n, ...)
   1. child node 중 vector를 뒤져서 해당 컬럼을 빼온다.
   2. 무식하지만 vector의 첫번째 child로 qualified keyword가 나오면 죄다 event-key라 간주한다.
@@ -79,7 +129,7 @@
   (let [handler-node (last (:args reg-event-fx-node))]
     (when (= (:op handler-node)
              :fn)
-      (collect-leading-qualified-keyword-of-vector handler-node))))
+      (collect-vectors-with-leading-qualified-keyword handler-node))))
 
 (defn- get-line-info
   "invoke node의 line 정보. 왜인지 모르겠지만 자기 자신의 위치는 없다.
@@ -89,12 +139,35 @@
               [:fn :env])
       (select-keys [:line :column])))
 
-(defn- key-with-line-info
-  "meta로 바꿀 수도 있으니, 일단 함수로 빼본다."
-  [filepath line-info key]
-  (assoc line-info
-         :key key
-         :filepath filepath))
+(defn- get-arg-form-from-method-form
+  [method-form]
+  (let [args-form (first method-form)
+        has-destructing? (= (-> method-form
+                                second
+                                first)
+                            'clojure.core/let)]
+    (if has-destructing?
+      (let [dest-map (->> method-form
+                         second
+                         second
+                         reverse
+                         (apply hash-map))]
+        (mapv dest-map
+              args-form))
+      args-form)))
+
+(defn- get-cb-arg-form
+  "마지막 인자가 cb 함수라 가정하고, cb 함수의 arg binding form을 가져온다.
+  간단하게는 (-> node :form last second) 라고 보면 된다."
+  [filepath line-info decl-node]
+  (let [cb-node (-> decl-node :args last)]
+    (assert (= (:op cb-node) :fn))
+    (assert (= (count (:methods cb-node)) 1)
+            (str "multi-arity callback funtion? "
+                 filepath
+                 line-info))
+    (get-arg-form-from-method-form (get-in cb-node
+                                           [:methods 0 :form]))))
 
 (defn- collect-call-info-from-file [aux file]
   (let [filepath (.getAbsolutePath file)
@@ -116,68 +189,86 @@
                   (update aux
                           :refer-sub-key
                           conj!
-                          (key-with-line-info filepath
-                                              line-info
-                                              sub-key)))
+                          (refer-info filepath
+                                      line-info
+                                      sub-key
+                                      (get-in node
+                                              [:args 0 :form]))))
 
                 ;; reg-sub
                 (= (get-in node [:fn :name])
                    're-frame.core/reg-sub)
-                (let [decl-sub-key (get-in node
+                (let [line-info (get-line-info node)
+                      decl-sub-key (get-in node
                                            [:args 0 :val])
-                      deps-sub-keys (get-deps-sub-keys node)
-                      
-                      line-info (get-line-info node)]
+                      decl-cb-arg-form (get-cb-arg-form filepath
+                                                        line-info
+                                                        node)
+                      deps-subs-calls (collect-dependant-subs-calls node)]
                   (cond-> aux
                     decl-sub-key
                     (update :decl-sub-key
                             conj!
-                            (key-with-line-info filepath
-                                                line-info
-                                                decl-sub-key))
+                            (decl-sub-info filepath
+                                           line-info
+                                           decl-sub-key
+                                           decl-cb-arg-form
+                                           deps-subs-calls))
 
-                    (seq deps-sub-keys)
+                    (seq deps-subs-calls)
                     (update :refer-sub-key
                             utils/into!
-                            (map (partial key-with-line-info
-                                          filepath
-                                          line-info)
-                                 deps-sub-keys))))
+                            (map (fn [subs-call]
+                                   (refer-info filepath
+                                               line-info
+                                               (first subs-call)
+                                               subs-call))
+                                 deps-subs-calls))))
 
                 ;; reg-event-fx
                 (= (get-in node [:fn :name])
                    're-frame.core/reg-event-fx)
-                (let [decl-event-key (get-in node
+                (let [line-info (get-line-info node)
+                      decl-event-key (get-in node
                                              [:args 0 :val])
-                      deps-event-keys (get-deps-event-keys node)
-                      line-info (get-line-info node)]
+                      decl-cb-arg-form (get-cb-arg-form filepath
+                                                        line-info
+                                                        node)
+                      deps-event-calls (collect-dependant-event-calls node)]
                   (cond-> aux
                     decl-event-key
                     (update :decl-event-key
                             conj!
-                            (key-with-line-info filepath
-                                                line-info
-                                                decl-event-key))
-                    (seq deps-event-keys)
+                            (decl-event-info filepath
+                                             line-info
+                                             decl-event-key
+                                             decl-cb-arg-form))
+                    (seq deps-event-calls)
                     (update :refer-event-key
                             utils/into!
-                            (map (partial key-with-line-info
-                                          filepath
-                                          line-info)
-                                 deps-event-keys))))
+                            (map (fn [event-call]
+                                   (refer-info filepath
+                                               line-info
+                                               (first event-call)
+                                               event-call))
+                                 deps-event-calls))))
 
                 ;; reg-event-db
                 (= (get-in node [:fn :name])
                    're-frame.core/reg-event-db)
-                (let [decl-event-key (get-in node
+                (let [line-info (get-line-info node)
+                      decl-event-key (get-in node
                                              [:args 0 :val])
-                      line-info (get-line-info node)]
+                      decl-cb-arg-form (get-cb-arg-form filepath
+                                                        line-info
+                                                        node)]
                   (update aux
                           :decl-event-key
                           conj!
-                          (key-with-line-info filepath
-                                              line-info
-                                              decl-event-key)))
+                          (decl-event-info filepath
+                                           line-info
+                                           decl-event-key
+                                           decl-cb-arg-form)))
 
                 ;; dispatch / dispatch-sync
                 (contains? #{'re-frame.core/dispatch
@@ -185,14 +276,17 @@
                            (get-in node [:fn :name]))
                 (let [event-key (get-in node
                                         [:args 0 :items 0 :val])
+                      event-call-form (get-in node
+                                              [:args 0 :form])
                       line-info (get-line-info node)]
                   (if event-key
                     (update aux
                             :refer-event-key
                             conj!
-                            (key-with-line-info filepath
-                                                line-info
-                                                event-key))
+                            (refer-info filepath
+                                        line-info
+                                        event-key
+                                        event-call-form))
                     ;; 간접 호출: (re-frame/dispatch (conj on-finally xhr res))
                     aux))
                 
@@ -218,81 +312,17 @@
                (collect-call-info-from-file aux
                                             file))))))
 
-(defn- find-unknown-sub-key [call-info]
-  (let [registered-sub-keys (->> (:decl-sub-key call-info)
-                                 (map :key)
-                                 (set))]
-    (->> (:refer-sub-key call-info)
-         (filter (comp not registered-sub-keys :key)))))
-
-(defn- print-info [info]
-  (println (:filepath info) "line:" (:line info) "column:" (:column info) (:key info)))
-
-(defn- print-infos [infos]
-  (doseq [info infos]
-    (print-info info))
-  (println ""))
-
-(defn- lint-unknown-sub-keys [call-info]
-  (let [unknown-keys (find-unknown-sub-key call-info)]
-    (when (seq unknown-keys)
-      (prn "Unknown sub keys:")
-      (print-infos unknown-keys)
-      true)))
-
-(defn- find-unknown-event-key [call-info]
-  (let [registered-event-key (->> (:decl-event-key call-info)
-                                  (map :key)
-                                  (set))]
-    (->> (:refer-event-key call-info)
-         (filter (comp not registered-event-key :key)))))
-
-(defn- lint-unknown-event-keys [call-info]
-  (let [unknown-keys (find-unknown-event-key call-info)]
-      (when (seq unknown-keys)
-        (prn "Unknown event keys:")
-        (print-infos unknown-keys)
-        true)))
-
-(defn- find-unused-sub-key [call-info]
-  (let [used-keys (->> (:refer-sub-key call-info)
-                          (map :key)
-                          (set))]
-    (->> (:decl-sub-key call-info)
-         (filter (comp not used-keys :key)))))
-
-(defn- lint-unused-sub-keys [call-info]
-  (let [unused-keys (find-unused-sub-key call-info)]
-    (when (seq unused-keys)
-      (prn "Unusued sub keys:")
-      (print-infos unused-keys)
-      true)))
-
-
-(defn- find-unused-event-key [call-info]
-  (let [used-keys (->> (:refer-event-key call-info)
-                       (map :key)
-                       (set))]
-    (->> (:decl-event-key call-info)
-         (filter (comp not used-keys :key)))))
-
-(defn- lint-unused-event-keys [call-info]
-  (let [unused-keys (find-unused-event-key call-info)]
-    (when (seq unused-keys)
-      (prn "Unused event keys:")
-      (print-infos unused-keys)
-      true)))
 
 (defn- lint [opts]
-  (let [call-info (collect-call-info opts)
-        has-unknown-sub-key? (lint-unknown-sub-keys call-info)
-        has-unknown-event-key? (lint-unknown-event-keys call-info)
-        has-unused-sub-key? (lint-unused-sub-keys call-info)
-        has-unused-event-key? (lint-unused-event-keys call-info)]
-    {:some-warnings (or has-unknown-sub-key?
-                        has-unknown-event-key?
-                        has-unused-sub-key?
-                        has-unused-event-key?)}))
+  (let [call-info (collect-call-info opts)]
+    {:some-warnings (some true?
+                          [(lints/lint-unknown-sub-keys call-info)
+                           (lints/lint-unknown-event-keys call-info)
+                           (lints/lint-unused-sub-keys call-info)
+                           (lints/lint-unused-event-keys call-info)
+                           (lints/lint-signal-args-mismatch call-info)
+                           (lints/lint-subs-arity-mismatch call-info)
+                           (lints/lint-event-arity-mismatch call-info)])}))
 
 (defn- lint-from-cmdline [opts]
   (let [ret (lint opts)]
@@ -306,6 +336,14 @@
       ;; linting a project.  Call shutdown-agents to avoid the
       ;; 1-minute 'hang' that would otherwise occur.
       (shutdown-agents))))
+
+(defn print-sample-ast
+  "lein run -m re-frame-lint.core/print-sample-ast > resources/analyze_me_ast.edn"
+  []
+  (-> (io/resource "analyze_me.cljs")
+      (ast/analyze-file)
+      (ast/trim-env)
+      (pprint/pprint)))
 
 (defn -main [& paths]
   (lint-from-cmdline {:source-paths paths}))

@@ -15,6 +15,8 @@ clone this project somewhere.
 
 ## TODO
 
+- [x] argument spec check
+- lint 설정 option으로 설정할 수 있도록.
 - logger library 붙이기.
 - 쉽게 실행할 수 있도록 lein plugin 으로 동작하도록 한다.
 - 속도 향상

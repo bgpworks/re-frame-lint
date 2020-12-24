@@ -6,7 +6,27 @@
  ::setting
  :<- [::local-db]
  (fn [ldb _]
-   ldb))
+   (:a ldb)))
+
+(rf/reg-sub
+ ::omit-param-sub
+ (fn [db]
+   (let [db (:inner db)]
+     (:a db))))
+
+(rf/reg-sub
+ ::parameterized-sub
+ (fn [db [_ hello]]
+   (str (:a db) hello)))
+
+(rf/reg-sub
+ ::complex-parameterized-sub
+ :<- [::input-a]
+ :<- [::input-b]
+ (fn [[input-a input-b] [_ arg]]
+   (let [max-input (max input-a input-b)]
+     (str max-input
+          arg))))
 
 (rf/reg-event-fx
  ::update-setting
