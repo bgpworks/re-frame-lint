@@ -1,8 +1,17 @@
 (ns re-frame-lint.lints
   (:require [re-frame-lint.utils :as utils]))
 
+(defn- refer-info->str [info]
+  (str (:filepath info)
+       " line: "
+       (:line info)
+       " column: "
+       (:column info)
+       " "
+       (:key info)))
+
 (defn- print-info [info]
-  (println (:filepath info) "line:" (:line info) "column:" (:column info) (:key info)))
+  (println (refer-info->str info)))
 
 (defn- print-infos [infos]
   (doseq [info infos]
@@ -91,28 +100,41 @@
 (defn- find-arity-mismatch [decls refers]
   (let [decl-map (utils/to-map decls
                                :key)]
-    (filter (fn [refer-info]
+    (keep (fn [refer-info]
               (let [invoke-arity (count (:args refer-info))
                     decl-arity (get-in decl-map
                                        [(:key refer-info)
                                         :arity])]
-                (and decl-arity
-                     (not= decl-arity
-                           invoke-arity))))
+                (when (and decl-arity
+                           (not= decl-arity
+                                 invoke-arity))
+                  {:refer refer-info
+                   :invoke-arity invoke-arity
+                   :decl-arity decl-arity})))
             refers)))
+
+(defn- print-mismatch-infos [infos]
+  (doseq [info infos]
+    (let [refer-info (refer-info->str (:refer info))]
+      (println refer-info
+               (str "expected: "
+                    (:decl-arity info)
+                    ", got: "
+                    (:invoke-arity info)))))
+  (println ""))
 
 (defn lint-subs-arity-mismatch [call-info]
   (let [mismatchs (find-arity-mismatch (:decl-sub-key call-info)
                                        (:refer-sub-key call-info))]
     (when (seq mismatchs)
-      (prn "subscribe call airty mismatch:")
-      (print-infos mismatchs)
+      (prn "subscribe call arity mismatch:")
+      (print-mismatch-infos mismatchs)
       true)))
 
 (defn lint-event-arity-mismatch [call-info]
   (let [mismatchs (find-arity-mismatch (:decl-event-key call-info)
                                        (:refer-event-key call-info))]
     (when (seq mismatchs)
-      (prn "event call airty mismatch:")
-      (print-infos mismatchs)
+      (prn "event call arity mismatch:")
+      (print-mismatch-infos mismatchs)
       true)))
