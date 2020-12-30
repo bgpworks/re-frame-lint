@@ -140,12 +140,21 @@
       (select-keys [:line :column])))
 
 (defn- get-arg-form-from-method-form
-  [method-form]
+  [filepath line-info method-form]
+  (assert (seq? method-form)
+          (str "method-form is not list: "
+               (with-out-str
+                 (pprint/pprint method-form))
+               " of type "
+               (type method-form)
+               "\n"
+               filepath
+               line-info))
   (let [args-form (first method-form)
-        has-destructing? (= (-> method-form
-                                second
-                                first)
-                            'clojure.core/let)]
+        body-form (second method-form)
+        has-destructing? (and (seq? body-form)
+                              (= (first body-form)
+                                 'clojure.core/let))]
     (if has-destructing?
       (let [dest-map (->> method-form
                          second
@@ -166,7 +175,9 @@
             (str "multi-arity callback funtion? "
                  filepath
                  line-info))
-    (get-arg-form-from-method-form (get-in cb-node
+    (get-arg-form-from-method-form filepath
+                                   line-info
+                                   (get-in cb-node
                                            [:methods 0 :form]))))
 
 (defn- collect-call-info-from-file [aux file]
