@@ -42,7 +42,9 @@
 
 (def cljs-warnings
   (-> cljs-ana/*cljs-warnings*
-      (assoc :undeclared-var false)))
+      (assoc :undeclared-var false
+             :invalid-protocol-symbol false
+             :protocol-invalid-method false)))
 
 (defn- default-and-refer-macros->refer [form]
   (if (vector? form)
@@ -139,9 +141,11 @@
                cljs.analyzer/*cljs-file* path
                cljs.analyzer/*cljs-warnings* cljs-warnings
                reader/*alias-map* (or reader/*alias-map* {})
-               cljs.analyzer/*analyze-deps* false]
+               cljs.analyzer/*analyze-deps* false
+               cljs.analyzer/*unchecked-if* cljs.analyzer/*unchecked-if*]
        (let [env (assoc (ana-api/empty-env)
                         :build-options opts)]
+         #_(cljs.compiler/with-core-cljs)
          (with-open [rdr (io/reader res)]
            (loop [asts []
                   forms (seq (ana-api/forms-seq rdr
