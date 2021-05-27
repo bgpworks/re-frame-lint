@@ -76,7 +76,9 @@
          :spec cb-spec
          :arity (guess-arity (second cb-spec))))
 
-(defn- collect-dependant-subs-calls [reg-sub-node]
+(defn- collect-dependant-subs-calls
+  ":<- syntactic sugar만 지원. signals function은 지원 안함."
+  [reg-sub-node]
   (let [mid-args (-> (:args reg-sub-node)
                      butlast
                      next)]
@@ -165,11 +167,34 @@
               args-form))
       args-form)))
 
+(defn- get-subs-cb-fn
+  "reg-sub의 computation function에 (memoize (fn [_ _] ))를 허용하기 위한 hack."
+  [cb-node filepath line-info]
+  (case (:op cb-node)
+    :fn
+    cb-node
+
+    :invoke
+    (let [last-arg (-> cb-node :args last)]
+      (assert (= (:op last-arg) :fn)
+              "reg-sub handler not found. unhandled cased.")
+      last-arg)
+
+    ;; else
+    (assert false
+            (str "unknown form of subscription handler "
+                 filepath
+                 line-info))))
+
 (defn- get-cb-arg-form
   "마지막 인자가 cb 함수라 가정하고, cb 함수의 arg binding form을 가져온다.
   간단하게는 (-> node :form last second) 라고 보면 된다."
   [filepath line-info decl-node]
-  (let [cb-node (-> decl-node :args last)]
+  (let [cb-node (-> decl-node
+                    :args
+                    last
+                    (get-subs-cb-fn filepath
+                                    line-info))]
     (assert (= (:op cb-node) :fn))
     (assert (= (count (:methods cb-node)) 1)
             (str "multi-arity callback funtion? "
