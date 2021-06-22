@@ -9,13 +9,13 @@
 
 (defn ends-with?
   "Returns true if the java.io.File ends in any of the strings in coll"
-  [file coll]
+  [^java.io.File file coll]
   (some #(.endsWith (.getName file) %) coll))
 
 (defn clojure-file?
   "Returns true if the java.io.File represents a Clojure source file.
   Extensions taken from https://github.com/github/linguist/blob/master/lib/linguist/languages.yml"
-  [file]
+  [^java.io.File file]
   (and (.isFile file)
        (ends-with? file [".clj" ".cl2" ".cljc" ".cljs" ".cljscm" ".cljx" ".hic" ".hl"])))
 
@@ -25,7 +25,7 @@
   Taken from clojure.tools.namespace.find"
   [^File dir]
   ;; Use sort by absolute path to get breadth-first search.
-  (sort-by #(.getAbsolutePath ^File %)
+  (sort-by #(.getAbsolutePath ^java.io.File %)
            (filter clojure-file? (file-seq dir))))
 
 
@@ -205,7 +205,7 @@
                                    (get-in cb-node
                                            [:methods 0 :form]))))
 
-(defn- collect-call-info-from-file [aux file]
+(defn- collect-call-info-from-file [aux ^java.io.File file]
   (let [filepath (.getAbsolutePath file)
         file-ast (ast/analyze-file file)
         nodes (mapcat ast/nodes file-ast)]

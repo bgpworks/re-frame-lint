@@ -9,4 +9,5 @@
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}}
+  :global-vars {*warn-on-reflection* true}
   :cljfmt {:indents {cljs.analyzer.api/in-cljs-user [[:inner 0]]}})
