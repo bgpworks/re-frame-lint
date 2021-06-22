@@ -65,6 +65,23 @@ clojurescript를 직접 써서 좀 애매한 부분들이 있다. [ast.clj](src/
 - [clj-kondo](https://github.com/borkdude/clj-kondo)
 - [clojure-lsp](https://github.com/snoe/clojure-lsp)
 
+
+### Graalvm 빌드
+
+https://www.innoq.com/en/blog/native-clojure-and-graalvm/
+https://github.com/kkinnear/zprint/
+
+참고해서 하려고 했는데 잘 안됨.
+
+```
+Original exception that caused the problem: org.graalvm.compiler.core.common.PermanentBailoutException: Frame states being merged are incompatible: unbalanced monitors - locked objects do not match
+```
+
+locking 문제는 clojure 버전 올리면 된다고 하는데, clojurescript 자체가 graalvm 빌드가 안되는거 아닐까.
+zprint도 보면 clojurescript deps에서 제거하고 있다.
+
+rewrite-clj로 갈아타야 grallvm 빌드가 가능할 듯.
+
 ## License
 
 Copyright © 2020 BGPWORKS
