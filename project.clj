@@ -7,7 +7,7 @@
                  [org.clojure/clojurescript "1.10.764"]]
   :main ^:skip-aot re-frame-lint.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all
+  :profiles {:dev {:global-vars {*warn-on-reflection* true}}
+             :uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}}
-  :global-vars {*warn-on-reflection* true}
   :cljfmt {:indents {cljs.analyzer.api/in-cljs-user [[:inner 0]]}})
