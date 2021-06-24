@@ -63,8 +63,8 @@
 
 (defn- find-unused-sub-key [call-info]
   (let [used-keys (->> (:refer-sub-key call-info)
-                          (map :key)
-                          (set))]
+                       (map :key)
+                       (set))]
     (->> (:decl-sub-key call-info)
          (filter (comp not used-keys :key)))))
 
@@ -167,31 +167,45 @@
       true)))
 
 (defn- filter-private-keys
-  ":key 가 _ 로 시작되는 애들을 거름."
+  ":key 가 _ 로 시작되는 애들을 찾음."
   [coll]
   (filter (fn [{:keys [key]}]
             (-> (name key)
                 (cs/starts-with? "_")))
           coll))
 
+(defn- filter-public-keys
+  ":key 가 _ 로 시작되는 애들 제외"
+  [coll]
+  (filter (fn [{:keys [key]}]
+            (-> (name key)
+                (cs/starts-with? "_")
+                (not)))
+          coll))
+
+(defn- filter-used-from-other-ns
+  ":ns와 :key의 namespace가 일치하지 않는 값들"
+  [coll]
+  (filter (fn [info]
+            (let [used-in-ns (name (:ns info))
+                  decl-in-ns (namespace (:key info))]
+              (not= used-in-ns
+                    decl-in-ns)))
+          coll))
 
 (defn- find-misused-private-key
   ":ns 와 :key의 namespace가 일치하지 않는 private keyword들 찾음."
   [refer-keys]
   (->> refer-keys
        (filter-private-keys)
-       (filter (fn [refer-info]
-                 (let [used-in-ns (name (:ns refer-info))
-                       decl-in-ns (namespace (:key refer-info))]
-                   (not= used-in-ns
-                         decl-in-ns))))))
+       (filter-used-from-other-ns)))
 
 (defn lint-misused-private-sub-keys
   "namespace 밖에서 쓰인 private sub 키들 찾음."
   [call-info]
   (let [errors (find-misused-private-key (:refer-sub-key call-info))]
     (when (seq errors)
-      (prn "Private sub keys used out of scope:")
+      (prn "Private sub keys used out of namespace:")
       (print-infos "warning"
                    "misused-private-sub-key"
                    errors)
@@ -202,8 +216,42 @@
   [call-info]
   (let [errors (find-misused-private-key (:refer-event-key call-info))]
     (when (seq errors)
-      (prn "Private event keys used out of scope:")
+      (prn "Private event keys used out of namespace:")
       (print-infos "warning"
                    "misused-private-event-key"
+                   errors)
+      true)))
+
+(defn- find-unused-outside-key [decl-info refer-info]
+  (let [used-keys (->> refer-info
+                       (filter-used-from-other-ns)
+                       (map :key)
+                       (set))
+        ]
+    (->> decl-info
+         (filter-public-keys)
+         (filter (comp not used-keys :key)))))
+
+(defn lint-should-private-sub-keys
+  "namespace 밖에서 쓰이지 않는 sub키는 private로 선언하도록."
+  [call-info]
+  (let [errors (find-unused-outside-key (:decl-sub-key call-info)
+                                        (:refer-sub-key call-info))]
+    (when (seq errors)
+      (prn "Not used out of namespace. Consider switch to private keyword:")
+      (print-infos "warning"
+                   "switch-to-private-sub-key"
+                   errors)
+      true)))
+
+(defn lint-should-private-event-keys
+  "namespace 밖에서 쓰이지 않는 event키는 private로 선언하도록."
+  [call-info]
+  (let [errors (find-unused-outside-key (:decl-event-key call-info)
+                                        (:refer-event-key call-info))]
+    (when (seq errors)
+      (prn "Not used out of namespace. Consider switch to private keyword:")
+      (print-infos "warning"
+                   "switch-to-private-event-key"
                    errors)
       true)))

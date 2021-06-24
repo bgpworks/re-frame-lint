@@ -1,6 +1,7 @@
 (ns re-frame-lint.core
   (:gen-class)
   (:require [clojure.java.io :as io]
+            [clojure.string :as string]
             [clojure.pprint :as pprint]
             [re-frame-lint.ast :as ast]
             [re-frame-lint.utils :as utils]
@@ -207,8 +208,22 @@
                                    (get-in cb-node
                                            [:methods 0 :form]))))
 
+(defn- ^String normalize-path
+  "Normalizes a file path on Unix systems by eliminating '.' and '..' from it.
+   No attempts are made to resolve symbolic links."
+  [^String file-path]
+  (loop [dest []
+         src (string/split file-path #"/")]
+    (if (empty? src)
+      (string/join "/" dest)
+      (let [curr (first src)]
+        (cond (= curr ".") (recur dest (rest src))
+              (= curr "..") (recur (vec (butlast dest)) (rest src))
+              :else (recur (conj dest curr) (rest src)))))))
+
 (defn- collect-call-info-from-file [aux ^java.io.File file]
-  (let [filepath (.getAbsolutePath file)
+  (let [filepath (-> (.getAbsolutePath file)
+                     (normalize-path))
         file-ast (ast/analyze-file file)
         nodes (mapcat ast/nodes file-ast)]
     (reduce (fn [aux node]
@@ -362,7 +377,9 @@
                            (lints/lint-subs-arity-mismatch call-info)
                            (lints/lint-event-arity-mismatch call-info)
                            (lints/lint-misused-private-sub-keys call-info)
-                           (lints/lint-misused-private-event-keys call-info)])}))
+                           (lints/lint-misused-private-event-keys call-info)
+                           (lints/lint-should-private-sub-keys call-info)
+                           (lints/lint-should-private-event-keys call-info)])}))
 
 (defn- lint-from-cmdline [opts]
   (let [ret (lint opts)]
