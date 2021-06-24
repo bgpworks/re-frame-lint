@@ -137,9 +137,11 @@
   "invoke node의 line 정보. 왜인지 모르겠지만 자기 자신의 위치는 없다.
   대신 함수의 위치는 있는데, 대충 비슷할 테니 이걸로 쓴다."
   [invoke-node]
-  (-> (get-in invoke-node
-              [:fn :env])
-      (select-keys [:line :column])))
+  (let [env (get-in invoke-node
+                    [:fn :env])]
+    {:line (:line env)
+     :column (:column env)
+     :ns (get-in env [:ns :name])}))
 
 (defn- get-arg-form-from-method-form
   [filepath line-info method-form]
@@ -358,7 +360,9 @@
                            (lints/lint-unused-event-keys call-info)
                            (lints/lint-signal-args-mismatch call-info)
                            (lints/lint-subs-arity-mismatch call-info)
-                           (lints/lint-event-arity-mismatch call-info)])}))
+                           (lints/lint-event-arity-mismatch call-info)
+                           (lints/lint-misused-private-sub-keys call-info)
+                           (lints/lint-misused-private-event-keys call-info)])}))
 
 (defn- lint-from-cmdline [opts]
   (let [ret (lint opts)]

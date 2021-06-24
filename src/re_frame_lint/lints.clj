@@ -1,5 +1,6 @@
 (ns re-frame-lint.lints
-  (:require [re-frame-lint.utils :as utils]))
+  (:require [re-frame-lint.utils :as utils]
+            [clojure.string :as cs]))
 
 (defn- refer-info->str
   "clj-kondo style과 비슷하게 맞춤."
@@ -163,4 +164,46 @@
       (print-mismatch-infos "error"
                             "event-call-arity-mismatch"
                             mismatchs)
+      true)))
+
+(defn- filter-private-keys
+  ":key 가 _ 로 시작되는 애들을 거름."
+  [coll]
+  (filter (fn [{:keys [key]}]
+            (-> (name key)
+                (cs/starts-with? "_")))
+          coll))
+
+
+(defn- find-misused-private-key
+  ":ns 와 :key의 namespace가 일치하지 않는 private keyword들 찾음."
+  [refer-keys]
+  (->> refer-keys
+       (filter-private-keys)
+       (filter (fn [refer-info]
+                 (let [used-in-ns (name (:ns refer-info))
+                       decl-in-ns (namespace (:key refer-info))]
+                   (not= used-in-ns
+                         decl-in-ns))))))
+
+(defn lint-misused-private-sub-keys
+  "namespace 밖에서 쓰인 private sub 키들 찾음."
+  [call-info]
+  (let [errors (find-misused-private-key (:refer-sub-key call-info))]
+    (when (seq errors)
+      (prn "Private sub keys used out of scope:")
+      (print-infos "warning"
+                   "misused-private-sub-key"
+                   errors)
+      true)))
+
+(defn lint-misused-private-event-keys
+  "namespace 밖에서 쓰인 private event 키들 찾음."
+  [call-info]
+  (let [errors (find-misused-private-key (:refer-event-key call-info))]
+    (when (seq errors)
+      (prn "Private event keys used out of scope:")
+      (print-infos "warning"
+                   "misused-private-event-key"
+                   errors)
       true)))
