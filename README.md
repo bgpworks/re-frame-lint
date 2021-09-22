@@ -45,6 +45,70 @@ clone this project somewhere.
     [:span @(re-frame.core/subscribe [:visible-key])]])
 ```
 
+### reg-event-fx 함수 쪼개기
+
+`reg-event-fx` 함수가 너무 뚱뚱해서 body 일부를 함수로 빼고 싶을 때는, 해당 함수 metadata에 `:reg-event-fx` 를 추가한다.
+
+```cljs
+(rf/reg-event-fx
+ :to-phase/signing-in-by-provider
+ (fn [_ [_ provider-key user-info]]
+   {:fx [[:dispatch [::_set-phase :signing-in-by-provider]]
+         [:api-call {:url (str "/api/user/sign-in/"
+                               (name provider-key))
+                     :method "POST"
+                     :body (-> {:token (:token user-info)}
+                               (util/map->qs))
+                     :on-success login-util/boxhero-login
+                     :on-error (fn [xhr res]
+                                 (let [code (:code res)]
+                                   (condp = code
+                                     :user-not-found
+                                     (rf/dispatch [:to-phase/sign-up-by-provider
+                                                   provider-key
+                                                   user-info])
+
+                                     ;;else
+                                     (do
+                                       (error-handler xhr
+                                                      res)
+                                       (rf/dispatch [:to-phase/entry])))))}]]}))
+```
+
+에서 api-call 부분을 함수를 빼고 싶으면 아래와 같이 뺀다.
+
+```cljs
+(defn- ^:reg-event-fx sign-in-api [provider-key user-info]
+  {:url (str "/api/user/sign-in/"
+             (name provider-key))
+   :method "POST"
+   :body (-> {:token (:token user-info)}
+             (util/map->qs))
+   ;; TODO: 개선
+   :on-success login-util/boxhero-login
+   :on-error (fn [xhr res]
+               (let [code (:code res)]
+                 (condp = code
+                   :user-not-found
+                   (rf/dispatch [:to-phase/sign-up-by-provider
+                                 provider-key
+                                 user-info])
+
+                   ;;else
+                   (do
+                     (error-handler xhr
+                                    res)
+                     (rf/dispatch [:to-phase/entry])))))})
+
+(rf/reg-event-fx
+ :to-phase/signing-in-by-provider
+ (fn [_ [_ provider-key user-info]]
+   {:fx [[:dispatch [::_set-phase :signing-in-by-provider]]
+         [:api-call (sign-in-api provider-key
+                                 user-info)]]}))
+```
+
+
 ## Memo
 
 ### tools.analyzer 관련

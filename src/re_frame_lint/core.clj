@@ -78,6 +78,13 @@
          :spec cb-spec
          :arity (guess-arity (second cb-spec))))
 
+(defn- decl-fx-info
+  [filepath line-info key cb-spec]
+  (assoc line-info
+         :filepath filepath
+         :key key
+         :spec cb-spec))
+
 (defn- collect-dependant-subs-calls
   ":<- syntactic sugar만 지원. signals function은 지원 안함."
   [reg-sub-node]
@@ -113,15 +120,23 @@
           (recur found-refers
                  (next args)))))))
 
-(defn- get-line-info
-  "invoke node의 line 정보. 왜인지 모르겠지만 자기 자신의 위치는 없다.
+(defmulti ^:private get-line-info :op)
+
+(defmethod get-line-info :invoke [invoke-node]
+  #_"invoke node의 line 정보. 왜인지 모르겠지만 자기 자신의 위치는 없다.
   대신 함수의 위치는 있는데, 대충 비슷할 테니 이걸로 쓴다."
-  [invoke-node]
   (let [env (get-in invoke-node
                     [:fn :env])]
     {:line (:line env)
      :column (:column env)
      :ns (get-in env [:ns :name])}))
+
+(defmethod get-line-info :def [def-node]
+  (let [meta (get-in def-node
+                    [:var :info :meta])]
+    {:line (:line meta)
+     :column (:column meta)
+     :ns (:ns def-node)}))
 
 (defn- collect-vectors-with-leading-qualified-keyword [top-node]
   (->> (ast/nodes top-node)
@@ -139,11 +154,37 @@
   1. child node 중 vector를 뒤져서 해당 컬럼을 빼온다.
   2. 무식하지만 vector의 첫번째 child로 qualified keyword가 나오면 죄다 event-key라 간주한다.
   구현이 간단한 2를 씀."
-  [reg-event-fx-node]
+  [handler-node]
+  (assert (= (:op handler-node)
+             :fn)
+          "should be called with fx node")
+  (->> handler-node
+       (collect-vectors-with-leading-qualified-keyword)
+       (filter (fn [call-vector]
+                 (not (utils/fx-keyword? (first call-vector)))))))
+
+(defn- collect-dependant-fx-calls
+  "연쇄적으로 부르는 fx deps 가져오기 (:fx, event key 참조, ...)
+  무식하지만 fx-keyword? 인 애를 다 모은다.
+  인자는 당장 쓸껀 아니므로 모으지 않음."
+  [handler-node]
+  (assert (= (:op handler-node)
+             :fn)
+          "should be called with fx node")
+  (->> handler-node
+       (ast/nodes)
+       (keep (fn [node]
+               (when (and (= (:op node)
+                             :const)
+                          (utils/fx-keyword? (:val node)))
+                 ;; 인자는 당장 쓸껀 아니므로 모으지 않음.
+                 [(:val node)])))))
+
+(defn- get-handler-node [reg-event-fx-node]
   (let [handler-node (last (:args reg-event-fx-node))]
     (if (= (:op handler-node)
            :fn)
-      (collect-vectors-with-leading-qualified-keyword handler-node)
+      handler-node
       (let [line-info (get-line-info reg-event-fx-node)]
         (log/error "Last argument of reg-event-fx is not a function:"
                    line-info)
@@ -226,6 +267,43 @@
               (= curr "..") (recur (vec (butlast dest)) (rest src))
               :else (recur (conj dest curr) (rest src)))))))
 
+(defn- reg-event-fx-handler?
+  "(defn- ^:reg-event-fx ...) 로 정의된 함수는 reg-event-fx 에서 불린다 가정하고 검사.
+  reg-event-fx handler body에서 invoke 노드 참조해서 다 따라갈 수도 있지만,
+  구현이 복잡하니 명시적으로 지정하는걸로."
+  [node]
+  (and (= (:op node)
+          :def)
+       (= (get-in node
+                  [:init :op])
+          :fn)
+       (get-in node
+               [:var :info :meta :reg-event-fx])))
+
+(defn- collect-refer-info-from-handler [aux filepath line-info handler-node]
+  (let [deps-event-calls (collect-dependant-event-calls handler-node)
+        deps-fx-calls (collect-dependant-fx-calls handler-node)]
+    (cond-> aux
+      (seq deps-event-calls)
+      (update :refer-event-key
+              utils/into!
+              (map (fn [event-call]
+                     (refer-info filepath
+                                 line-info
+                                 (first event-call)
+                                 event-call))
+                   deps-event-calls))
+
+      (seq deps-fx-calls)
+      (update :refer-fx-key
+              utils/into!
+              (map (fn [fx-call]
+                     (refer-info filepath
+                                 line-info
+                                 (first fx-call)
+                                 fx-call))
+                   deps-fx-calls)))))
+
 (defn- collect-call-info-from-file [aux ^java.io.File file]
   (let [filepath (-> (.getAbsolutePath file)
                      (normalize-path))
@@ -233,6 +311,15 @@
         nodes (mapcat ast/nodes file-ast)]
     (reduce (fn [aux node]
               (cond
+                ;; ^:reg-event-fx 가 붙은 함수들
+                (reg-event-fx-handler? node)
+                (let [line-info (get-line-info node)]
+                  (collect-refer-info-from-handler aux
+                                                   filepath
+                                                   line-info
+                                                   (:init node)))
+
+                ;; 외에는 invoke node만 검사
                 (not= (:op node)
                       :invoke)
                 aux
@@ -252,6 +339,23 @@
                                       sub-key
                                       (get-in node
                                               [:args 0 :form]))))
+
+                ;; reg-fx
+                (= (get-in node [:fn :name])
+                   're-frame.core/reg-fx)
+                (let [line-info (get-line-info node)
+                      decl-fx-key (get-in node
+                                          [:args 0 :val])
+                      decl-cb-arg-form (get-cb-arg-form filepath
+                                                        line-info
+                                                        node)]
+                  (update aux
+                          :decl-fx-key
+                          conj!
+                          (decl-fx-info filepath
+                                        line-info
+                                        decl-fx-key
+                                        decl-cb-arg-form)))
 
                 ;; reg-sub
                 (= (get-in node [:fn :name])
@@ -292,7 +396,7 @@
                       decl-cb-arg-form (get-cb-arg-form filepath
                                                         line-info
                                                         node)
-                      deps-event-calls (collect-dependant-event-calls node)]
+                      handler-node (get-handler-node node)]
                   (cond-> aux
                     decl-event-key
                     (update :decl-event-key
@@ -301,15 +405,11 @@
                                              line-info
                                              decl-event-key
                                              decl-cb-arg-form))
-                    (seq deps-event-calls)
-                    (update :refer-event-key
-                            utils/into!
-                            (map (fn [event-call]
-                                   (refer-info filepath
-                                               line-info
-                                               (first event-call)
-                                               event-call))
-                                 deps-event-calls))))
+
+                    handler-node
+                    (collect-refer-info-from-handler filepath
+                                                     line-info
+                                                     handler-node)))
 
                 ;; reg-event-db
                 (= (get-in node [:fn :name])
@@ -359,8 +459,10 @@
     (loop [[file & remain-files] source-files
            aux {:decl-sub-key (transient [])
                 :refer-sub-key (transient [])
+                :decl-event-key (transient [])
                 :refer-event-key (transient [])
-                :decl-event-key (transient [])}]
+                :decl-fx-key (transient [])
+                :refer-fx-key (transient [])}]
       (if (nil? file)
         (reduce-kv (fn [aux k v]
                      (assoc aux k (persistent! v)))
@@ -384,7 +486,10 @@
                            (lints/lint-misused-private-sub-keys call-info)
                            (lints/lint-misused-private-event-keys call-info)
                            (lints/lint-should-private-sub-keys call-info)
-                           (lints/lint-should-private-event-keys call-info)])}))
+                           (lints/lint-should-private-event-keys call-info)
+                           (lints/lint-invalid-fx-keys call-info)
+                           (lints/lint-unknown-fx-keys call-info)
+                           (lints/lint-unused-fx-keys call-info)])}))
 
 (defn- lint-from-cmdline [opts]
   (let [ret (lint opts)]

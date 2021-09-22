@@ -226,8 +226,7 @@
   (let [used-keys (->> refer-info
                        (filter-used-from-other-ns)
                        (map :key)
-                       (set))
-        ]
+                       (set))]
     (->> decl-info
          (filter-public-keys)
          (filter (comp not used-keys :key)))))
@@ -254,4 +253,56 @@
       (print-infos "warning"
                    "switch-to-private-event-key"
                    errors)
+      true)))
+
+(defn- find-invalid-fx-key [decl-info]
+  (->> decl-info
+       (filter (fn [{:keys [key]}]
+                 (-> key
+                     (utils/fx-keyword?)
+                     (not))))))
+
+(defn lint-invalid-fx-keys
+  "fx-key는 ns-qualified에 fx- 를 prefix로 쓴다."
+  [call-info]
+  (let [errors (find-invalid-fx-key (:decl-fx-key call-info))]
+    (when (seq errors)
+      (prn (str "Invalid fx name. Add prefix " \" utils/fx-key-prefix \"))
+      (print-infos "warning"
+                   "invalid-fx-key"
+                   errors)
+      true)))
+
+(defn- find-unknown-fx-key [call-info]
+  (let [registered-fx-keys (->> (:decl-fx-key call-info)
+                                 (map :key)
+                                 (set))]
+    (->> (:refer-fx-key call-info)
+         (filter (comp not registered-fx-keys :key)))))
+
+(defn lint-unknown-fx-keys [call-info]
+  (let [unknown-keys (find-unknown-fx-key call-info)]
+    (when (seq unknown-keys)
+      (prn "Unknown fx keys:")
+      (print-infos "error"
+                   "unknown-fx-key"
+                   unknown-keys)
+      true)))
+
+(defn- find-unused-fx-key [call-info]
+  (let [used-keys (->> (:refer-fx-key call-info)
+                       (map :key)
+                       (set))]
+    (->> (:decl-fx-key call-info)
+         ;; 이건 invalid-fx-key 에서 보고될 예정
+         (filter (comp utils/fx-keyword? :key))
+         (filter (comp not used-keys :key)))))
+
+(defn lint-unused-fx-keys [call-info]
+  (let [unused-keys (find-unused-fx-key call-info)]
+    (when (seq unused-keys)
+      (prn "Unusued fx keys:")
+      (print-infos "warning"
+                   "unused-fx-key"
+                   unused-keys)
       true)))
