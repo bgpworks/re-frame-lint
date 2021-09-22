@@ -46,7 +46,9 @@
              :invalid-protocol-symbol false
              :protocol-invalid-method false)))
 
-(defn- default-and-refer-macros->refer [form]
+(defn- default-and-refer-macros->refer
+  ":refer-macros [a] 나 :default a 를 :refer [a] 로 바꾼다."
+  [form]
   (if (vector? form)
     (let [ns-symbol (first form)
           options (apply hash-map (rest form))]
@@ -71,16 +73,31 @@
         form))
     form))
 
+(defn- strip-include-macros
+  ":include-macros true 를 삭제한다."
+  [form]
+  (if (vector? form)
+    (let [ns-symbol (first form)
+          options (apply hash-map (rest form))]
+      (if (:include-macros options)
+        (->> (dissoc options
+                     :include-macros)
+             (apply concat)
+             (into [ns-symbol]))
+        form))
+    form))
+
 (defn- hotfix-ns* [ns-form]
   (loop [orig ns-form
          others []
          require ()]
     (if (empty? orig)
-      (-> (conj others
-                (list* :require
-                       (map default-and-refer-macros->refer
-                            require)))
-          (seq))
+      (->> require
+           (map default-and-refer-macros->refer)
+           (map strip-include-macros)
+           (list* :require)
+           (conj others)
+           (seq))
       (let [form (first orig)]
         (cond
           (not (coll? form))
@@ -106,7 +123,8 @@
                  require))))))
 
 (defn- hotfix-ns
-  "shadow-cljs style ns form (:require [\"react-abc\" :default abc]) to "
+  "shadow-cljs 기능인 :default -> :refer로 수정. macro 관련 기능들 제거.
+  근본적으로 rewrite-clj 로 갈아타야함."
   [ns-form]
   (if (= (first ns-form)
          'ns)
