@@ -1,5 +1,4 @@
-(ns re-frame-lint.utils
-  (:require [clojure.string :as string]))
+(ns re-frame-lint.utils)
 
 (def fx-key-prefix "fx-")
 
@@ -20,8 +19,12 @@
             (transient {})
             coll))))
 
+(def ^:private valid-fx-key-regex (-> (str "^_?"
+                                           fx-key-prefix)
+                                      (re-pattern )))
+
 (defn fx-keyword? [fx-key]
   (and (keyword? fx-key)
        (qualified-keyword? fx-key)
-       (string/starts-with? (name fx-key)
-                            fx-key-prefix)))
+       (some? (re-find valid-fx-key-regex
+                      (name fx-key)))))
