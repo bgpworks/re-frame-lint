@@ -4,6 +4,7 @@
             [clojure.string :as string]
             [clojure.pprint :as pprint]
             [clojure.tools.logging :as log]
+            [clojure.tools.cli :as cli]
             [re-frame-lint.ast :as ast]
             [re-frame-lint.utils :as utils]
             [re-frame-lint.lints :as lints])
@@ -453,9 +454,9 @@
             aux
             nodes)))
 
-(defn- collect-call-info [opts]
+(defn- collect-call-info [paths]
   (let [source-files (mapcat #(-> % io/file find-clojure-sources-in-dir)
-                             (:source-paths opts))]
+                             paths)]
     (loop [[file & remain-files] source-files
            aux {:decl-sub-key (transient [])
                 :refer-sub-key (transient [])
@@ -473,26 +474,28 @@
                                             file))))))
 
 
-(defn- lint [opts]
-  (let [call-info (collect-call-info opts)]
-    {:some-warnings (some true?
-                          [(lints/lint-unknown-sub-keys call-info)
-                           (lints/lint-unknown-event-keys call-info)
-                           (lints/lint-unused-sub-keys call-info)
-                           (lints/lint-unused-event-keys call-info)
-                           (lints/lint-signal-args-mismatch call-info)
-                           (lints/lint-subs-arity-mismatch call-info)
-                           (lints/lint-event-arity-mismatch call-info)
-                           (lints/lint-misused-private-sub-keys call-info)
-                           (lints/lint-misused-private-event-keys call-info)
-                           (lints/lint-should-private-sub-keys call-info)
-                           (lints/lint-should-private-event-keys call-info)
-                           (lints/lint-invalid-fx-keys call-info)
-                           (lints/lint-unknown-fx-keys call-info)
-                           (lints/lint-unused-fx-keys call-info)])}))
+(defn- lint [paths opts]
+  (let [call-info (collect-call-info paths)]
+    {:some-warnings (->> (concat [(lints/lint-unknown-sub-keys call-info)
+                                  (lints/lint-unknown-event-keys call-info)
+                                  (lints/lint-unused-sub-keys call-info)
+                                  (lints/lint-unused-event-keys call-info)
+                                  (lints/lint-signal-args-mismatch call-info)
+                                  (lints/lint-subs-arity-mismatch call-info)
+                                  (lints/lint-event-arity-mismatch call-info)
+                                  (lints/lint-misused-private-sub-keys call-info)
+                                  (lints/lint-misused-private-event-keys call-info)
+                                  (lints/lint-should-private-sub-keys call-info)
+                                  (lints/lint-should-private-event-keys call-info)]
+                                 (when (:lint-fx opts)
+                                   [(lints/lint-invalid-fx-keys call-info)
+                                    (lints/lint-unknown-fx-keys call-info)
+                                    (lints/lint-unused-fx-keys call-info)]))
+                         (some true?))}))
 
-(defn- lint-from-cmdline [opts]
-  (let [ret (lint opts)]
+(defn- lint-from-cmdline [paths opts]
+  (let [ret (lint paths
+                  opts)]
     (if (:some-warnings ret)
       ;; Exit with non-0 exit status for the benefit of any shell
       ;; scripts invoking Eastwood that want to know if there were no
@@ -512,5 +515,59 @@
       (ast/trim-env)
       (pprint/pprint)))
 
-(defn -main [& paths]
-  (lint-from-cmdline {:source-paths paths}))
+(def ^:private cli-options
+  [[nil "--lint-fx" "Enable linters for reg-fx"]
+   ["-h" "--help"]])
+
+(defn- usage [options-summary]
+  (->> ["Simple linter for re-frame."
+        ""
+        "Usage: re-frame-lint [options] path1 path2 ..."
+        ""
+        "Options:"
+        options-summary]
+       (string/join \newline)))
+
+(defn- error-msg [errors]
+  (str "The following errors occurred while parsing your command:\n\n"
+       (string/join \newline errors)))
+
+(defn- validate-args
+  "Validate command line arguments. Either return a map indicating the program
+  should exit (with a error message, and optional ok status), or a map
+  indicating the action the program should take and the options provided."
+  [args]
+  (let [{:keys [options
+                arguments
+                errors
+                summary]} (cli/parse-opts args
+                                          cli-options)]
+    (cond
+      (:help options) ; help => exit OK with usage summary
+      {:exit-message (usage summary)
+       :ok? true}
+
+      errors ; errors => exit with description of errors
+      {:exit-message (error-msg errors)}
+
+      (empty? arguments)
+      {:exit-message "Paths are not given."}
+
+      :else
+      {:paths arguments
+       :options options})))
+
+(defn- exit [status msg]
+  (println msg)
+  (System/exit status))
+
+(defn -main [& args]
+  (let [{:keys [paths
+                options
+                exit-message
+                ok?]} (validate-args args)]
+    (if exit-message
+      (exit (if ok? 0 1)
+            exit-message)
+      (lint-from-cmdline paths
+                         options))))

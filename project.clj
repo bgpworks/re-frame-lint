@@ -5,7 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.3"]
                  [org.clojure/clojurescript "1.10.764"]
-                 [org.clojure/tools.logging "1.1.0"]]
+                 [org.clojure/tools.logging "1.1.0"]
+                 [org.clojure/tools.cli "1.0.206"]]
   :main ^:skip-aot re-frame-lint.core
   :target-path "target/%s"
   :profiles {:dev {:global-vars {*warn-on-reflection* true}}
