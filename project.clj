@@ -1,4 +1,4 @@
-(defproject re-frame-lint "0.1.2"
+(defproject re-frame-lint "0.1.3"
   :description "Linter to check re-frame handlers."
   :url "https://github.com/bgpworks/re-frame-lint"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
