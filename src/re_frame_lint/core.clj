@@ -490,7 +490,8 @@
                                  (when (:lint-fx opts)
                                    [(lints/lint-invalid-fx-keys call-info)
                                     (lints/lint-unknown-fx-keys call-info)
-                                    (lints/lint-unused-fx-keys call-info)]))
+                                    (lints/lint-unused-fx-keys call-info)
+                                    (lints/lint-should-private-fx-keys call-info)]))
                          (some true?))}))
 
 (defn- lint-from-cmdline [paths opts]

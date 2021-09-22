@@ -306,3 +306,18 @@
                    "unused-fx-key"
                    unused-keys)
       true)))
+
+(defn lint-should-private-fx-keys
+  "namespace 밖에서 쓰이지 않는 fx키는 private로 선언하도록."
+  [call-info]
+  (let [valid-decls-fx-key (->> (:decl-fx-key call-info)
+                                (filter (comp utils/fx-keyword? :key)))
+        ;; invalid decl-fx-key는 refer에서 안 잡힌다.
+        errors (find-unused-outside-key valid-decls-fx-key
+                                        (:refer-fx-key call-info))]
+    (when (seq errors)
+      (prn "Not used out of namespace. Consider switch to private keyword:")
+      (print-infos "warning"
+                   "switch-to-private-fx-key"
+                   errors)
+      true)))
