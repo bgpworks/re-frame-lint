@@ -3,6 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.pprint :as pprint]
+            [clojure.tools.logging :as log]
             [re-frame-lint.ast :as ast]
             [re-frame-lint.utils :as utils]
             [re-frame-lint.lints :as lints])
@@ -102,15 +103,25 @@
                        (:form vector-node))
                  (nnext args))
           (do
-            (prn "Invalid reg-sub syntax:" (:form reg-sub-node))
+            (log/error "Invalid reg-sub syntax:" (:form reg-sub-node))
             (recur found-refers
                    (nnext args))))
 
         :else
         (do
-          (prn "Invalid reg-sub syntax:" (:form reg-sub-node))
+          (log/error "Invalid reg-sub syntax:" (:form reg-sub-node))
           (recur found-refers
                  (next args)))))))
+
+(defn- get-line-info
+  "invoke node의 line 정보. 왜인지 모르겠지만 자기 자신의 위치는 없다.
+  대신 함수의 위치는 있는데, 대충 비슷할 테니 이걸로 쓴다."
+  [invoke-node]
+  (let [env (get-in invoke-node
+                    [:fn :env])]
+    {:line (:line env)
+     :column (:column env)
+     :ns (get-in env [:ns :name])}))
 
 (defn- collect-vectors-with-leading-qualified-keyword [top-node]
   (->> (ast/nodes top-node)
@@ -130,19 +141,13 @@
   구현이 간단한 2를 씀."
   [reg-event-fx-node]
   (let [handler-node (last (:args reg-event-fx-node))]
-    (when (= (:op handler-node)
-             :fn)
-      (collect-vectors-with-leading-qualified-keyword handler-node))))
-
-(defn- get-line-info
-  "invoke node의 line 정보. 왜인지 모르겠지만 자기 자신의 위치는 없다.
-  대신 함수의 위치는 있는데, 대충 비슷할 테니 이걸로 쓴다."
-  [invoke-node]
-  (let [env (get-in invoke-node
-                    [:fn :env])]
-    {:line (:line env)
-     :column (:column env)
-     :ns (get-in env [:ns :name])}))
+    (if (= (:op handler-node)
+           :fn)
+      (collect-vectors-with-leading-qualified-keyword handler-node)
+      (let [line-info (get-line-info reg-event-fx-node)]
+        (log/error "Last argument of reg-event-fx is not a function:"
+                   line-info)
+        nil))))
 
 (defn- get-arg-form-from-method-form
   [filepath line-info method-form]
