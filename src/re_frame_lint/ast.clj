@@ -131,15 +131,26 @@
     (hotfix-ns* ns-form)
     ns-form))
 
-(defn- hotfix-go-loop-recur
-  "async/go-loop -> loop"
+(defn- hotfix-macro
+  "실제 macro 실행을 안하기 떄문에, macro를 파싱이 될 정도로만 적당히 실행시켜준다.
+  <any-ns>/go-loop -> loop, <any-ns>/fn -> fn"
   [top-form]
   (walk/prewalk
    (fn [form]
-     (if (and (symbol? form)
-              (= (name form)
-                 "go-loop"))
+     (cond
+       (not (symbol? form))
+       form
+
+       (= (name form)
+          "go-loop")
        'loop
+
+       (and (qualified-symbol? form)
+            (= (name form)
+               "fn"))
+       'fn
+
+       :else
        form))
    top-form))
 
@@ -171,7 +182,7 @@
              (if forms
                (let [form (-> (first forms)
                               (hotfix-ns)
-                              (hotfix-go-loop-recur))
+                              (hotfix-macro))
                      env (assoc env :ns (cljs-ana/get-namespace cljs-ana/*cljs-ns*))
                      ast (cljs-ana/analyze env
                                            form
